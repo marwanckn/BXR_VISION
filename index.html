@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BXR VISION — Analyse e-football &amp; pronostics</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="mark"><span class="bxr">BXR</span> VISION</span>
+      <span class="tagline">Analyse de stats e-football (Volta) &amp; aide au pronostic</span>
+    </div>
+    <div class="header-right">
+      <button class="wallet-badge" id="wallet-badge" title="Voir / modifier mon solde">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2Z"/><path d="M17 13.5a1.5 1.5 0 1 0 0-.01"/></svg>
+        <span id="wallet-amount">100.00 €</span>
+      </button>
+      <nav class="tabs">
+        <button data-view="classement" class="active">Classement</button>
+        <button data-view="pronostic">Pronostic</button>
+        <button data-view="portefeuille">Portefeuille</button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ===================== CLASSEMENT ===================== -->
+  <section id="view-classement" class="view active">
+
+    <section class="card">
+      <h2 class="section-title">Vue d'ensemble</h2>
+      <div class="kpi-grid" id="kpi-grid"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Top 10 — Points au classement</h2>
+      <div class="hbar-chart" id="chart-points"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Top 10 — Attaque vs défense <span class="info">buts marqués et encaissés, en moyenne par match</span></h2>
+      <div class="chart-legend" id="chart-ad-legend"></div>
+      <div class="hbar-chart hbar-chart-dual" id="chart-attack-defense"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Ajouter des matchs <span class="info">importez un CSV pour faire évoluer les statistiques</span></h2>
+      <p class="disclaimer" style="margin-top:0;">
+        Format attendu, une ligne par match : <code>Domicile,Score_Domicile,Score_Exterieur,Exterieur,Vainqueur</code>
+        (avec ou sans ligne d'en-tête). La colonne <b>Vainqueur</b> peut être laissée vide, elle sera déduite automatiquement du score.
+      </p>
+      <div class="import-row">
+        <label class="file-btn">
+          Choisir un fichier CSV
+          <input type="file" id="csv-file-input" accept=".csv,text/csv">
+        </label>
+        <span id="import-status" class="import-status"></span>
+      </div>
+      <div id="import-errors" class="import-errors"></div>
+      <div class="import-meta" id="import-meta"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Classement général des joueurs</h2>
+      <div class="table-toolbar">
+        <input type="search" id="player-search" placeholder="Rechercher un joueur...">
+      </div>
+      <div class="table-scroll">
+        <table class="ranking" id="ranking-table">
+          <thead>
+            <tr>
+              <th data-key="name" title="Nom du joueur">Joueur</th>
+              <th data-key="mj" title="Nombre de matchs joués">MJ</th>
+              <th data-key="w" title="Nombre de victoires">V</th>
+              <th data-key="d" title="Nombre de matchs nuls">N</th>
+              <th data-key="l" title="Nombre de défaites">D</th>
+              <th data-key="winPct" title="Pourcentage de matchs gagnés">% V</th>
+              <th data-key="gf" title="Buts marqués au total, tous matchs confondus">BP</th>
+              <th data-key="ga" title="Buts encaissés au total, tous matchs confondus">BC</th>
+              <th data-key="diff" title="Buts marqués moins buts encaissés">Diff</th>
+              <th data-key="pts" title="Points au classement (3 pts par victoire, 1 pt par nul)">Pts</th>
+              <th data-key="avgGF" title="Buts marqués, en moyenne par match">Buts/M</th>
+              <th data-key="avgGA" title="Buts encaissés, en moyenne par match">Encais./M</th>
+              <th data-key="avgTotal" title="Total de buts (les deux équipes) en moyenne par match">Total/M</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+      <p class="disclaimer">MJ = matchs joués · V/N/D = victoires / nuls / défaites · BP/BC = buts pour / contre. Survolez un en-tête avec la souris pour voir son explication, ou cliquez dessus pour trier le tableau.</p>
+    </section>
+  </section>
+
+  <!-- ===================== PRONOSTIC ===================== -->
+  <section id="view-pronostic" class="view">
+
+    <section class="card">
+      <h2 class="section-title">Créer un pronostic</h2>
+      <div class="matchup-picker">
+        <div class="field">
+          <label for="select-p1">Joueur 1</label>
+          <select id="select-p1"></select>
+        </div>
+        <button class="swap-btn" id="swap-players" title="Inverser">⇄</button>
+        <div class="field">
+          <label for="select-p2">Joueur 2</label>
+          <select id="select-p2"></select>
+        </div>
+      </div>
+
+      <div class="lines-picker">
+        <div class="field">
+          <label for="select-line-ht">Ligne mi-temps chez Napoleon Games</label>
+          <select id="select-line-ht">
+            <option value="0.5">0.5</option>
+            <option value="1.5">1.5</option>
+            <option value="2.5" selected>2.5</option>
+            <option value="3.5">3.5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="select-line1">Ligne 1 chez Napoleon Games (match complet)</label>
+          <select id="select-line1">
+            <option value="2.5">2.5</option>
+            <option value="3.5" selected>3.5</option>
+            <option value="4.5">4.5</option>
+            <option value="5.5">5.5</option>
+            <option value="6.5">6.5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="select-line2">Ligne 2 chez Napoleon Games (match complet)</label>
+          <select id="select-line2">
+            <option value="2.5">2.5</option>
+            <option value="3.5">3.5</option>
+            <option value="4.5" selected>4.5</option>
+            <option value="5.5">5.5</option>
+            <option value="6.5">6.5</option>
+          </select>
+        </div>
+      </div>
+
+      <details class="help-box">
+        <summary>Comment utiliser cet outil ? (cliquez pour ouvrir)</summary>
+        <ul>
+          <li><b>Comparatif</b> : les stats globales de chaque joueur, côte à côte.</li>
+          <li><b>Face-à-face</b> : uniquement les matchs déjà joués entre ces deux joueurs précis, avec le score de chaque rencontre.</li>
+          <li><b>Qui va gagner</b> : la chance estimée que Joueur 1 gagne, que ce soit nul, ou que Joueur 2 gagne, calculée à partir des stats de chacun et de leur historique direct.</li>
+          <li><b>Ligne mi-temps / Ligne 1 / Ligne 2</b> : regardez sur Napoleon Games quelles lignes de buts sont proposées pour ce match précis (mi-temps généralement 2.5, match complet entre 2.5 et 6.5), et indiquez-les ici. Vos options recopient exactement ce que montre Napoleon Games, en haut de l'analyse.</li>
+          <li><b>Total de buts</b> : pour chaque ligne, cliquez sur <b>PLUS DE</b> ou <b>MOINS DE</b> pour ajouter ce pari à votre <b>ticket</b>, à droite (ou en bas sur mobile). Vous pouvez cocher autant d'options que vous voulez, sur autant de lignes que vous voulez — y compris dans le tableau complet plus bas.</li>
+          <li><b>Ticket</b> : pour chaque pari coché, entrez la cote affichée par Napoleon Games et le montant que vous voulez miser. Le site calcule le gain potentiel et vous dit si c'est un <b>bon pari</b> ou non par rapport à vos statistiques.</li>
+          <li><b>Portefeuille</b> : votre solde de départ, débité quand vous validez un ticket. Vous réglez ensuite chaque pari en cours en "Gagné" ou "Perdu" (ou en entrant le score final) pour suivre votre solde réel.</li>
+        </ul>
+        <p class="help-disclaimer">Tout ceci reste une estimation statistique basée sur des matchs passés, pas une garantie de résultat. Le solde est un compteur local pour vous aider à suivre vos mises, ce n'est pas de l'argent réel.</p>
+      </details>
+    </section>
+
+    <div id="pronostic-empty" class="card empty-state">Choisissez deux joueurs différents pour lancer l'analyse.</div>
+
+    <div class="pronostic-layout" id="pronostic-results">
+
+      <div class="pronostic-main">
+
+        <section class="card">
+          <h2 class="section-title">Comparatif des deux joueurs <span class="info">stats globales, tous matchs confondus</span></h2>
+          <div class="compare-grid" id="compare-grid"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">Face-à-face <span class="info">les matchs déjà joués entre ces deux joueurs précis</span></h2>
+          <div id="h2h-summary" class="h2h-summary"></div>
+          <div class="h2h-list">
+            <table>
+              <thead><tr><th>#</th><th id="h2h-th-a">Joueur 1</th><th>Score</th><th id="h2h-th-b">Joueur 2</th><th>Vainqueur</th></tr></thead>
+              <tbody id="h2h-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">Qui va gagner ? <span class="info">estimation basée sur les stats des deux joueurs + leur historique direct</span></h2>
+          <div class="expected-score" id="expected-score"></div>
+          <div class="meter-wrap">
+            <div class="meter" id="wdl-meter"></div>
+            <div class="meter-legend" id="wdl-legend"></div>
+          </div>
+        </section>
+
+        <section class="card top-picks-card">
+          <h2 class="section-title">Vos options Napoleon Games <span class="info">la ligne mi-temps + les 2 lignes match complet choisies ci-dessus</span></h2>
+          <div id="top-picks"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">Nombre total de buts — match complet <span class="info">le tableau complet, toutes les lignes</span></h2>
+          <p class="disclaimer">Cliquez sur une option pour l'ajouter à votre ticket. Le pourcentage affiché est la probabilité estimée par BXR VISION.</p>
+          <div id="ft-markets"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">1ère mi-temps — nombre total de buts <span class="info">le tableau complet, toutes les lignes</span></h2>
+          <div id="ht-markets"></div>
+          <p class="disclaimer">Le fichier de stats fourni ne contient pas les scores à la mi-temps : ces probabilités sont donc une <b>estimation</b> (on suppose qu'environ 42% des buts du match tombent en 1ère période), pas un calcul exact comme pour le match complet.</p>
+        </section>
+
+      </div>
+
+      <aside class="bet-slip" id="bet-slip">
+        <div class="slip-handle" id="slip-handle">
+          <span class="slip-handle-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+            Mon ticket
+          </span>
+          <span class="slip-handle-count" id="slip-count-badge">0</span>
+        </div>
+        <div class="slip-body">
+          <div class="slip-header">
+            <span>Mon ticket</span>
+            <span class="slip-count" id="slip-count">0 sélection</span>
+          </div>
+          <div class="slip-items" id="slip-items">
+            <div class="slip-empty">Cliquez sur "PLUS DE" ou "MOINS DE" dans un marché pour ajouter un pari ici.</div>
+          </div>
+          <div class="slip-footer" id="slip-footer" style="display:none;">
+            <div class="slip-total-row"><span>Mise totale</span><span id="slip-total-stake">0.00 €</span></div>
+            <div class="slip-total-row"><span>Gain potentiel total</span><span id="slip-total-payout">0.00 €</span></div>
+            <button class="place-bet-btn" id="place-bet-btn">Valider mon ticket</button>
+            <button class="copy-ticket-btn" id="copy-ticket-btn">Copier mon ticket</button>
+            <div class="slip-msg" id="slip-msg"></div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+  <!-- ===================== PORTEFEUILLE ===================== -->
+  <section id="view-portefeuille" class="view">
+
+    <section class="card wallet-overview">
+      <h2 class="section-title">Mon portefeuille</h2>
+      <div class="wallet-grid">
+        <div class="wallet-stat main">
+          <span class="k">Solde actuel</span>
+          <span class="v" id="pf-balance">100.00 €</span>
+          <button class="edit-balance-btn" id="edit-balance-btn">Modifier le solde</button>
+        </div>
+        <div class="wallet-stat">
+          <span class="k">Paris en cours</span>
+          <span class="v" id="pf-pending-count">0</span>
+        </div>
+        <div class="wallet-stat">
+          <span class="k">Misé en cours</span>
+          <span class="v" id="pf-pending-stake">0.00 €</span>
+        </div>
+        <div class="wallet-stat">
+          <span class="k">Bénéfice net réglé</span>
+          <span class="v" id="pf-profit">0.00 €</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Paris en cours <span class="info">à régler manuellement une fois le résultat du match connu</span></h2>
+      <div id="pending-bets-list"><div class="empty-state">Aucun pari en cours pour l'instant.</div></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Historique <span class="info">paris déjà réglés</span></h2>
+      <div id="settled-bets-list"><div class="empty-state">Aucun pari réglé pour l'instant.</div></div>
+    </section>
+
+  </section>
+
+</main>
+
+<footer class="site">BXR VISION — outil d'aide à la décision basé sur des statistiques historiques. Ne garantit aucun résultat. Le solde est un compteur local, pas de l'argent réel. Jouez de manière responsable.</footer>
+
+<!-- ===================== MODAL SOLDE ===================== -->
+<div class="modal-overlay" id="wallet-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span>Modifier mon solde</span>
+      <button class="modal-close" id="wallet-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label for="wallet-input">Nouveau solde</label>
+      <input type="number" id="wallet-input" step="0.01" min="0">
+      <div class="modal-actions">
+        <button class="btn-secondary" id="wallet-reset-btn">Réinitialiser à 100 €</button>
+        <button class="btn-primary" id="wallet-save-btn">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
