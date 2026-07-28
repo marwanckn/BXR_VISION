@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BXR VISION — Analyse e-football &amp; pronostics</title>
+<link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,8 +12,11 @@
 <header class="site">
   <div class="header-inner">
     <div class="brand">
-      <span class="mark"><span class="bxr">BXR</span> VISION</span>
-      <span class="tagline">Analyse de stats e-football (Volta) &amp; aide au pronostic</span>
+      <img src="assets/logo.png" alt="BXR Vision" class="brand-logo">
+      <div class="brand-text">
+        <span class="mark"><span class="bxr">BXR</span> VISION</span>
+        <span class="tagline">Analyse de stats e-football (Volta) &amp; aide au pronostic</span>
+      </div>
     </div>
     <div class="header-right">
       <button class="wallet-badge" id="wallet-badge" title="Voir / modifier mon solde">
@@ -115,44 +119,70 @@
       </div>
 
       <div class="lines-picker">
-        <div class="field">
-          <label for="select-line-ht">Ligne mi-temps chez Napoleon Games</label>
-          <select id="select-line-ht">
-            <option value="0.5">0.5</option>
-            <option value="1.5">1.5</option>
-            <option value="2.5" selected>2.5</option>
-            <option value="3.5">3.5</option>
-          </select>
+        <div class="lines-group">
+          <div class="lines-group-title">1ère mi-temps</div>
+          <div class="lines-group-fields">
+            <div class="field">
+              <label for="select-line-ht1">Ligne mi-temps 1</label>
+              <select id="select-line-ht1">
+                <option value="0.5">0.5</option>
+                <option value="1.5" selected>1.5</option>
+                <option value="2.5">2.5</option>
+                <option value="3.5">3.5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="select-line-ht2">Ligne mi-temps 2</label>
+              <select id="select-line-ht2">
+                <option value="0.5">0.5</option>
+                <option value="1.5">1.5</option>
+                <option value="2.5" selected>2.5</option>
+                <option value="3.5">3.5</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label for="select-line1">Ligne 1 chez Napoleon Games (match complet)</label>
-          <select id="select-line1">
-            <option value="2.5">2.5</option>
-            <option value="3.5" selected>3.5</option>
-            <option value="4.5">4.5</option>
-            <option value="5.5">5.5</option>
-            <option value="6.5">6.5</option>
-          </select>
+        <div class="lines-group">
+          <div class="lines-group-title">Match complet</div>
+          <div class="lines-group-fields">
+            <div class="field">
+              <label for="select-line1">Ligne 1</label>
+              <select id="select-line1">
+                <option value="2.5">2.5</option>
+                <option value="3.5" selected>3.5</option>
+                <option value="4.5">4.5</option>
+                <option value="5.5">5.5</option>
+                <option value="6.5">6.5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="select-line2">Ligne 2</label>
+              <select id="select-line2">
+                <option value="2.5">2.5</option>
+                <option value="3.5">3.5</option>
+                <option value="4.5" selected>4.5</option>
+                <option value="5.5">5.5</option>
+                <option value="6.5">6.5</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label for="select-line2">Ligne 2 chez Napoleon Games (match complet)</label>
-          <select id="select-line2">
-            <option value="2.5">2.5</option>
-            <option value="3.5">3.5</option>
-            <option value="4.5" selected>4.5</option>
-            <option value="5.5">5.5</option>
-            <option value="6.5">6.5</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="run-analysis-row">
+        <button type="button" class="run-analysis-btn" id="run-analysis-btn">Lancer l'analyse</button>
+        <span class="run-analysis-hint" id="run-analysis-hint"></span>
       </div>
 
       <details class="help-box">
         <summary>Comment utiliser cet outil ? (cliquez pour ouvrir)</summary>
         <ul>
+          <li><b>Joueurs &amp; lignes</b> : choisissez les deux joueurs, puis regardez sur Napoleon Games quelles lignes de buts sont proposées pour ce match précis (mi-temps généralement entre 0.5 et 3.5, match complet entre 2.5 et 6.5), et indiquez-les ici — vos deux lignes mi-temps et vos deux lignes match complet.</li>
+          <li><b>Lancer l'analyse</b> : cliquez sur le bouton pour calculer les pronostics à partir de ces paramètres. Une courte animation de chargement s'affiche, puis tous les résultats apparaissent d'un coup.</li>
           <li><b>Comparatif</b> : les stats globales de chaque joueur, côte à côte.</li>
           <li><b>Face-à-face</b> : uniquement les matchs déjà joués entre ces deux joueurs précis, avec le score de chaque rencontre.</li>
           <li><b>Qui va gagner</b> : la chance estimée que Joueur 1 gagne, que ce soit nul, ou que Joueur 2 gagne, calculée à partir des stats de chacun et de leur historique direct.</li>
-          <li><b>Ligne mi-temps / Ligne 1 / Ligne 2</b> : regardez sur Napoleon Games quelles lignes de buts sont proposées pour ce match précis (mi-temps généralement 2.5, match complet entre 2.5 et 6.5), et indiquez-les ici. Vos options recopient exactement ce que montre Napoleon Games, en haut de l'analyse.</li>
+          <li><b>Vos options Napoleon Games</b> : reprend exactement vos 2 lignes mi-temps + vos 2 lignes match complet choisies ci-dessus, en haut de l'analyse.</li>
           <li><b>Total de buts</b> : pour chaque ligne, cliquez sur <b>PLUS DE</b> ou <b>MOINS DE</b> pour ajouter ce pari à votre <b>ticket</b>, à droite (ou en bas sur mobile). Vous pouvez cocher autant d'options que vous voulez, sur autant de lignes que vous voulez — y compris dans le tableau complet plus bas.</li>
           <li><b>Ticket</b> : pour chaque pari coché, entrez la cote affichée par Napoleon Games et le montant que vous voulez miser. Le site calcule le gain potentiel et vous dit si c'est un <b>bon pari</b> ou non par rapport à vos statistiques.</li>
           <li><b>Portefeuille</b> : votre solde de départ, débité quand vous validez un ticket. Vous réglez ensuite chaque pari en cours en "Gagné" ou "Perdu" (ou en entrant le score final) pour suivre votre solde réel.</li>
@@ -161,7 +191,12 @@
       </details>
     </section>
 
-    <div id="pronostic-empty" class="card empty-state">Choisissez deux joueurs différents pour lancer l'analyse.</div>
+    <div id="pronostic-loading" class="card loading-state">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Analyse du match en cours…</div>
+    </div>
+
+    <div id="pronostic-empty" class="card empty-state">Choisissez deux joueurs puis cliquez sur « Lancer l'analyse » pour voir les pronostics.</div>
 
     <div class="pronostic-layout" id="pronostic-results">
 

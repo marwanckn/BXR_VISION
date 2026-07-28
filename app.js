@@ -271,7 +271,7 @@
     refreshPlayerSelects();
     renderRanking();
     renderDashboard();
-    updatePronostic();
+    refreshCurrentPronostic();
     renderImportMeta();
 
     const skippedMsg = errors.length ? ` (${errors.length} ligne${errors.length > 1 ? 's' : ''} ignorée${errors.length > 1 ? 's' : ''}, voir détail ci-dessous)` : '';
@@ -470,7 +470,7 @@
     refreshPlayerSelects();
     renderRanking();
     renderDashboard();
-    updatePronostic();
+    refreshCurrentPronostic();
     renderImportMeta();
 
     onWalletChanged();
@@ -524,7 +524,9 @@
   const selP2 = document.getElementById('select-p2');
   const selLine1 = document.getElementById('select-line1');
   const selLine2 = document.getElementById('select-line2');
-  const selLineHt = document.getElementById('select-line-ht');
+  const selLineHt1 = document.getElementById('select-line-ht1');
+  const selLineHt2 = document.getElementById('select-line-ht2');
+  const runAnalysisBtn = document.getElementById('run-analysis-btn');
 
   players.forEach(p => {
     selP1.add(new Option(p.name, p.name));
@@ -540,14 +542,9 @@
     const a = selP1.value;
     selP1.value = selP2.value;
     selP2.value = a;
-    updatePronostic();
   });
 
-  selP1.addEventListener('change', updatePronostic);
-  selP2.addEventListener('change', updatePronostic);
-  selLine1.addEventListener('change', () => { if (currentModel) renderFeaturedMarkets(currentModel); });
-  selLine2.addEventListener('change', () => { if (currentModel) renderFeaturedMarkets(currentModel); });
-  selLineHt.addEventListener('change', () => { if (currentModel) renderFeaturedMarkets(currentModel); });
+  runAnalysisBtn.addEventListener('click', runAnalysis);
 
   function refreshPlayerSelects() {
     const names = E.listPlayers().map(p => p.name);
@@ -918,25 +915,29 @@
   }
 
   // Affiche exactement les options que Napoleon Games propose pour ce match :
-  // la ligne mi-temps + les 2 lignes "match complet" choisies dans les sélecteurs.
+  // les 2 lignes "mi-temps" + les 2 lignes "match complet" choisies dans les sélecteurs.
   function renderFeaturedMarkets(model) {
-    const lineHt = parseFloat(selLineHt.value);
+    const lineHt1 = parseFloat(selLineHt1.value);
+    const lineHt2 = parseFloat(selLineHt2.value);
+    const htLines = lineHt1 === lineHt2 ? [lineHt1] : [lineHt1, lineHt2];
     const line1 = parseFloat(selLine1.value);
     const line2 = parseFloat(selLine2.value);
     const ftLines = line1 === line2 ? [line1] : [line1, line2];
 
     let html = '';
 
-    const overHt = model.htMarkets[lineHt].over;
-    const idHtOver = slipId(model.nameA, model.nameB, `ht-${lineHt}-over`);
-    const idHtUnder = slipId(model.nameA, model.nameB, `ht-${lineHt}-under`);
-    html += `
-      <div class="market-row" data-market="ht-${lineHt}">
-        <div class="market-line">MT ${lineHt.toFixed(1)}</div>
-        ${marketOptHtml(idHtOver, 'PLUS DE', overHt)}
-        ${marketOptHtml(idHtUnder, 'MOINS DE', 1 - overHt)}
-      </div>
-    `;
+    htLines.forEach(lineHt => {
+      const overHt = model.htMarkets[lineHt].over;
+      const idHtOver = slipId(model.nameA, model.nameB, `ht-${lineHt}-over`);
+      const idHtUnder = slipId(model.nameA, model.nameB, `ht-${lineHt}-under`);
+      html += `
+        <div class="market-row" data-market="ht-${lineHt}">
+          <div class="market-line">MT ${lineHt.toFixed(1)}</div>
+          ${marketOptHtml(idHtOver, 'PLUS DE', overHt)}
+          ${marketOptHtml(idHtUnder, 'MOINS DE', 1 - overHt)}
+        </div>
+      `;
+    });
 
     ftLines.forEach(line => {
       const over = model.ftMarkets[line].over;
@@ -957,21 +958,9 @@
     });
   }
 
-  function updatePronostic() {
-    const nameA = selP1.value, nameB = selP2.value;
-    const empty = document.getElementById('pronostic-empty');
-    const results = document.getElementById('pronostic-results');
+  const ANALYSIS_DELAY_MS = 900;
 
-    if (!nameA || !nameB || nameA === nameB) {
-      empty.style.display = 'block';
-      empty.textContent = nameA === nameB ? 'Choisissez deux joueurs différents pour lancer l\'analyse.' : 'Choisissez deux joueurs pour lancer l\'analyse.';
-      results.classList.remove('active');
-      return;
-    }
-
-    empty.style.display = 'none';
-    results.classList.add('active');
-
+  function computePronostic(nameA, nameB) {
     const model = E.buildMatchModel(nameA, nameB);
     currentModel = model;
 
@@ -982,8 +971,46 @@
     renderPrediction(model);
     renderMarkets(model);
     renderFeaturedMarkets(model);
+    return model;
   }
 
-  updatePronostic();
+  // Déclenchée par le bouton "Lancer l'analyse" : valide les paramètres, affiche
+  // une animation de chargement, puis révèle tous les pronostics d'un coup.
+  function runAnalysis() {
+    const nameA = selP1.value, nameB = selP2.value;
+    const hint = document.getElementById('run-analysis-hint');
+    const empty = document.getElementById('pronostic-empty');
+    const loading = document.getElementById('pronostic-loading');
+    const results = document.getElementById('pronostic-results');
+
+    if (!nameA || !nameB || nameA === nameB) {
+      hint.textContent = nameA === nameB ? 'Choisissez deux joueurs différents.' : 'Choisissez deux joueurs.';
+      hint.classList.add('error');
+      return;
+    }
+
+    hint.textContent = '';
+    hint.classList.remove('error');
+    empty.style.display = 'none';
+    results.classList.remove('active');
+    loading.classList.add('active');
+    runAnalysisBtn.disabled = true;
+
+    window.setTimeout(() => {
+      computePronostic(nameA, nameB);
+      loading.classList.remove('active');
+      results.classList.add('active');
+      runAnalysisBtn.disabled = false;
+    }, ANALYSIS_DELAY_MS);
+  }
+
+  // Après un import CSV ou un score saisi manuellement, rafraîchit l'analyse déjà
+  // affichée avec les nouvelles stats, sans rejouer l'animation de chargement.
+  function refreshCurrentPronostic() {
+    if (!currentModel) return;
+    const nameA = selP1.value, nameB = selP2.value;
+    if (!nameA || !nameB || nameA === nameB) return;
+    computePronostic(nameA, nameB);
+  }
 
 })();
