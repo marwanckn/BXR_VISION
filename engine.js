@@ -5,7 +5,7 @@
   'use strict';
 
   const DATA = global.BXR_DATA;
-  const HT_GOAL_RATIO = 0.42; // hypothese: part des buts marques en 1ere mi-temps (aucune donnee HT dans le CSV)
+  const HT_GOAL_RATIO_FALLBACK = 0.42; // hypothese utilisee tant qu'aucun match n'a de score mi-temps connu
   const MAX_GOALS = 14; // troncature de la loi de Poisson (au-dela, probabilite negligeable)
 
   // ---------- Donnees de base ----------
@@ -15,10 +15,12 @@
   let allMatches = (DATA && DATA.matches) ? DATA.matches.slice() : [];
   let _playersCache = null;
   let _league = null;
+  let _htCalibration = null;
 
   function invalidateCaches() {
     _playersCache = null;
     _league = null;
+    _htCalibration = null;
   }
 
   function addMatches(newMatches) {
@@ -84,6 +86,26 @@
     return _league;
   }
 
+  // Part reelle des buts marques en 1ere mi-temps, calculee sur tous les matchs de
+  // l'historique dont le score mi-temps est connu (sinon, hypothese par defaut).
+  function htCalibration() {
+    if (_htCalibration) return _htCalibration;
+    let sumHt = 0, sumFt = 0, sampleCount = 0;
+    allMatches.forEach(m => {
+      if (m.ht1 != null && m.ht2 != null) {
+        sumHt += m.ht1 + m.ht2;
+        sumFt += m.s1 + m.s2;
+        sampleCount++;
+      }
+    });
+    _htCalibration = {
+      ratio: sumFt > 0 ? sumHt / sumFt : HT_GOAL_RATIO_FALLBACK,
+      sampleCount,
+      isReal: sampleCount > 0
+    };
+    return _htCalibration;
+  }
+
   // ---------- Face-a-face ----------
 
   function headToHead(nameA, nameB) {
@@ -92,7 +114,10 @@
       .map(m => {
         const goalsA = m.p1 === nameA ? m.s1 : m.s2;
         const goalsB = m.p1 === nameA ? m.s2 : m.s1;
-        return { goalsA, goalsB, total: goalsA + goalsB, winner: m.winner };
+        const hasHt = m.ht1 != null && m.ht2 != null;
+        const htGoalsA = hasHt ? (m.p1 === nameA ? m.ht1 : m.ht2) : null;
+        const htGoalsB = hasHt ? (m.p1 === nameA ? m.ht2 : m.ht1) : null;
+        return { goalsA, goalsB, total: goalsA + goalsB, winner: m.winner, htGoalsA, htGoalsB };
       });
 
     const count = meetings.length;
@@ -154,7 +179,7 @@
     const h2h = headToHead(nameA, nameB);
     let h2hWeight = 0;
     if (h2h.count > 0) {
-      h2hWeight = Math.min(h2h.count / 10, 0.5); // jusqu'a 50% de poids a partir de 10 confrontations
+      h2hWeight = Math.min(h2h.count / 20, 0.5); // jusqu'a 50% de poids a partir de 10 confrontations
       lambdaA = (1 - h2hWeight) * lambdaA + h2hWeight * h2h.avgGoalsA;
       lambdaB = (1 - h2hWeight) * lambdaB + h2hWeight * h2h.avgGoalsB;
     }
@@ -189,11 +214,11 @@
     }
 
     const ftMarkets = {};
-    [2.5, 3.5, 4.5, 5.5, 6.5].forEach(line => { ftMarkets[line] = overUnder(line); });
+    [2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5].forEach(line => { ftMarkets[line] = overUnder(line); });
 
-    const muHT = (lambdaA + lambdaB) * HT_GOAL_RATIO;
+    const muHT = (lambdaA + lambdaB) * htCalibration().ratio;
     const htMarkets = {};
-    [0.5, 1.5, 2.5, 3.5].forEach(line => {
+    [0.5, 1.5, 2.5, 3.5, 4.5, 5.5].forEach(line => {
       const threshold = Math.floor(line) + 1;
       const over = 1 - poissonCdf(threshold - 1, muHT);
       htMarkets[line] = { over, under: 1 - over };
@@ -234,6 +259,6 @@
     poissonPmf, poissonCdf,
     impliedProb, evaluateValue,
     addMatches, getAllMatches,
-    HT_GOAL_RATIO
+    htCalibration
   };
 })(window);

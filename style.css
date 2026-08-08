@@ -520,6 +520,48 @@ table.ranking tbody tr:hover td:first-child { background: var(--surface-2); }
   gap: 12px;
 }
 
+.ht-lines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ht-line-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ht-line-row select { flex: 1; min-width: 0; }
+
+.ht-line-remove {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.ht-line-remove:hover { color: var(--critical); border-color: var(--critical); }
+
+.add-line-btn {
+  margin-top: 10px;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+.add-line-btn:hover { border-color: var(--accent); background: rgba(31, 157, 92, 0.08); }
+.add-line-btn:disabled { display: none; }
+
 .run-analysis-row {
   display: flex;
   align-items: center;
@@ -720,6 +762,13 @@ select:focus, input:focus {
 .h2h-list th, .h2h-list td { padding: 7px 10px; border-bottom: 1px solid var(--gridline); text-align: center; }
 .h2h-list th { color: var(--text-muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; position: sticky; top: 0; background: var(--surface-1); }
 .h2h-list td.score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.h2h-ht {
+  display: block;
+  font-weight: 400;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
 .h2h-list td.winner-a { color: var(--accent); }
 .h2h-list td.winner-b { color: var(--series-2); }
 

@@ -13,8 +13,12 @@ function parseCsv(file) {
 
 const matchLines = parseCsv('Stats_joueur.csv');
 const matches = matchLines.map(line => {
-  const [p1, s1, s2, p2, winner] = line.split(',');
-  return { p1, s1: +s1, s2: +s2, p2, winner };
+  const [p1, s1, s2, p2, winner, ht1, ht2] = line.split(',');
+  return {
+    p1, s1: +s1, s2: +s2, p2, winner,
+    ht1: ht1 ? +ht1 : null,
+    ht2: ht2 ? +ht2 : null
+  };
 });
 
 const playerLines = parseCsv('Stats_par_joueur.csv');

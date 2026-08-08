@@ -58,6 +58,8 @@
       <p class="disclaimer" style="margin-top:0;">
         Format attendu, une ligne par match : <code>Domicile,Score_Domicile,Score_Exterieur,Exterieur,Vainqueur</code>
         (avec ou sans ligne d'en-tête). La colonne <b>Vainqueur</b> peut être laissée vide, elle sera déduite automatiquement du score.
+        Vous pouvez aussi ajouter le score à la mi-temps en fin de ligne : <code>...,Vainqueur,MT_Domicile,MT_Exterieur</code>
+        (ou <code>Domicile,Score_Domicile,Score_Exterieur,Exterieur,MT_Domicile,MT_Exterieur</code> sans colonne Vainqueur).
       </p>
       <div class="import-row">
         <label class="file-btn">
@@ -121,26 +123,8 @@
       <div class="lines-picker">
         <div class="lines-group">
           <div class="lines-group-title">1ère mi-temps</div>
-          <div class="lines-group-fields">
-            <div class="field">
-              <label for="select-line-ht1">Ligne mi-temps 1</label>
-              <select id="select-line-ht1">
-                <option value="0.5">0.5</option>
-                <option value="1.5" selected>1.5</option>
-                <option value="2.5">2.5</option>
-                <option value="3.5">3.5</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="select-line-ht2">Ligne mi-temps 2</label>
-              <select id="select-line-ht2">
-                <option value="0.5">0.5</option>
-                <option value="1.5">1.5</option>
-                <option value="2.5" selected>2.5</option>
-                <option value="3.5">3.5</option>
-              </select>
-            </div>
-          </div>
+          <div class="ht-lines-list" id="ht-lines-list"></div>
+          <button type="button" class="add-line-btn" id="add-ht-line-btn">+ Ajouter une ligne</button>
         </div>
         <div class="lines-group">
           <div class="lines-group-title">Match complet</div>
@@ -153,6 +137,8 @@
                 <option value="4.5">4.5</option>
                 <option value="5.5">5.5</option>
                 <option value="6.5">6.5</option>
+                <option value="7.5">7.5</option>
+                <option value="8.5">8.5</option>
               </select>
             </div>
             <div class="field">
@@ -163,6 +149,8 @@
                 <option value="4.5" selected>4.5</option>
                 <option value="5.5">5.5</option>
                 <option value="6.5">6.5</option>
+                <option value="7.5">7.5</option>
+                <option value="8.5">8.5</option>
               </select>
             </div>
           </div>
@@ -177,12 +165,12 @@
       <details class="help-box">
         <summary>Comment utiliser cet outil ? (cliquez pour ouvrir)</summary>
         <ul>
-          <li><b>Joueurs &amp; lignes</b> : choisissez les deux joueurs, puis regardez sur Napoleon Games quelles lignes de buts sont proposées pour ce match précis (mi-temps généralement entre 0.5 et 3.5, match complet entre 2.5 et 6.5), et indiquez-les ici — vos deux lignes mi-temps et vos deux lignes match complet.</li>
+          <li><b>Joueurs &amp; lignes</b> : choisissez les deux joueurs, puis regardez sur Napoleon Games quelles lignes de buts sont proposées pour ce match précis (mi-temps généralement entre 0.5 et 3.5, match complet entre 2.5 et 8.5), et indiquez-les ici — ajoutez ou retirez des lignes mi-temps avec le bouton "+" selon ce que propose Napoleon Games, et vos deux lignes match complet.</li>
           <li><b>Lancer l'analyse</b> : cliquez sur le bouton pour calculer les pronostics à partir de ces paramètres. Une courte animation de chargement s'affiche, puis tous les résultats apparaissent d'un coup.</li>
           <li><b>Comparatif</b> : les stats globales de chaque joueur, côte à côte.</li>
           <li><b>Face-à-face</b> : uniquement les matchs déjà joués entre ces deux joueurs précis, avec le score de chaque rencontre.</li>
           <li><b>Qui va gagner</b> : la chance estimée que Joueur 1 gagne, que ce soit nul, ou que Joueur 2 gagne, calculée à partir des stats de chacun et de leur historique direct.</li>
-          <li><b>Vos options Napoleon Games</b> : reprend exactement vos 2 lignes mi-temps + vos 2 lignes match complet choisies ci-dessus, en haut de l'analyse.</li>
+          <li><b>Vos options Napoleon Games</b> : reprend exactement vos lignes mi-temps + vos 2 lignes match complet choisies ci-dessus, en haut de l'analyse.</li>
           <li><b>Total de buts</b> : pour chaque ligne, cliquez sur <b>PLUS DE</b> ou <b>MOINS DE</b> pour ajouter ce pari à votre <b>ticket</b>, à droite (ou en bas sur mobile). Vous pouvez cocher autant d'options que vous voulez, sur autant de lignes que vous voulez — y compris dans le tableau complet plus bas.</li>
           <li><b>Ticket</b> : pour chaque pari coché, entrez la cote affichée par Napoleon Games et le montant que vous voulez miser. Le site calcule le gain potentiel et vous dit si c'est un <b>bon pari</b> ou non par rapport à vos statistiques.</li>
           <li><b>Portefeuille</b> : votre solde de départ, débité quand vous validez un ticket. Vous réglez ensuite chaque pari en cours en "Gagné" ou "Perdu" (ou en entrant le score final) pour suivre votre solde réel.</li>
@@ -228,7 +216,7 @@
         </section>
 
         <section class="card top-picks-card">
-          <h2 class="section-title">Vos options Napoleon Games <span class="info">la ligne mi-temps + les 2 lignes match complet choisies ci-dessus</span></h2>
+          <h2 class="section-title">Vos options Napoleon Games <span class="info">vos lignes mi-temps + les 2 lignes match complet choisies ci-dessus</span></h2>
           <div id="top-picks"></div>
         </section>
 
@@ -241,7 +229,7 @@
         <section class="card">
           <h2 class="section-title">1ère mi-temps — nombre total de buts <span class="info">le tableau complet, toutes les lignes</span></h2>
           <div id="ht-markets"></div>
-          <p class="disclaimer">Le fichier de stats fourni ne contient pas les scores à la mi-temps : ces probabilités sont donc une <b>estimation</b> (on suppose qu'environ 42% des buts du match tombent en 1ère période), pas un calcul exact comme pour le match complet.</p>
+          <p class="disclaimer" id="ht-calibration-note">Ces probabilités sont une <b>estimation</b>, pas un calcul exact comme pour le match complet.</p>
         </section>
 
       </div>

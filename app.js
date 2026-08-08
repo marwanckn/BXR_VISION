@@ -181,14 +181,30 @@
   renderRanking();
   renderDashboard();
 
+  function renderHtCalibrationNote() {
+    const cal = E.htCalibration();
+    const el = document.getElementById('ht-calibration-note');
+    if (!el) return;
+    const pct = (cal.ratio * 100).toFixed(0);
+    el.innerHTML = cal.isReal
+      ? `Ces probabilités sont une <b>estimation</b> calibrée sur les ${cal.sampleCount} match${cal.sampleCount > 1 ? 's' : ''} de l'historique dont le score mi-temps est connu (en moyenne, ${pct}% des buts tombent en 1ère période) — pas un calcul exact comme pour le match complet.`
+      : `Aucun score mi-temps n'est encore connu dans l'historique : ces probabilités sont donc une <b>estimation</b> (on suppose qu'environ ${pct}% des buts du match tombent en 1ère période), pas un calcul exact comme pour le match complet.`;
+  }
+  renderHtCalibrationNote();
+
   // ============================================================
   // Import de matchs (CSV) — fait évoluer la base au fil du temps
   // ============================================================
 
+  // Formats acceptés, une ligne par match :
+  //   4 colonnes : Domicile,Score,Score,Exterieur                          (vainqueur déduit)
+  //   5 colonnes : Domicile,Score,Score,Exterieur,Vainqueur
+  //   6 colonnes : Domicile,Score,Score,Exterieur,MT_Domicile,MT_Exterieur (vainqueur déduit)
+  //   7 colonnes : Domicile,Score,Score,Exterieur,Vainqueur,MT_Domicile,MT_Exterieur
   function parseMatchesCsv(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     let start = 0;
-    if (lines.length && /^domicile[,;]/i.test(lines[0])) start = 1;
+    if (lines.length && /^(domicile|joueur\s*1)[,;]/i.test(lines[0])) start = 1;
 
     const matches = [];
     const errors = [];
@@ -197,7 +213,12 @@
       const parts = raw.split(',').map(s => s.trim());
       if (parts.length < 4) { errors.push(`Ligne ${i + 1} ignorée (colonnes manquantes) : "${raw}"`); continue; }
 
-      const [p1, s1raw, s2raw, p2, winnerRaw] = parts;
+      const [p1, s1raw, s2raw, p2] = parts;
+      let winnerRaw = '', ht1raw = '', ht2raw = '';
+      if (parts.length >= 7) { winnerRaw = parts[4]; ht1raw = parts[5]; ht2raw = parts[6]; }
+      else if (parts.length === 6) { ht1raw = parts[4]; ht2raw = parts[5]; }
+      else if (parts.length === 5) { winnerRaw = parts[4]; }
+
       const s1 = parseInt(s1raw, 10), s2 = parseInt(s2raw, 10);
       if (!p1 || !p2) { errors.push(`Ligne ${i + 1} ignorée (nom de joueur manquant) : "${raw}"`); continue; }
       if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) { errors.push(`Ligne ${i + 1} ignorée (score invalide) : "${raw}"`); continue; }
@@ -208,7 +229,15 @@
         errors.push(`Ligne ${i + 1} ignorée (le vainqueur "${winner}" ne correspond ni à "${p1}" ni à "${p2}") : "${raw}"`);
         continue;
       }
-      matches.push({ p1, s1, s2, p2, winner });
+
+      let ht1 = null, ht2 = null;
+      if (ht1raw !== '' && ht2raw !== '') {
+        const h1 = parseInt(ht1raw, 10), h2 = parseInt(ht2raw, 10);
+        if (!isNaN(h1) && !isNaN(h2) && h1 >= 0 && h2 >= 0 && h1 <= s1 && h2 <= s2) { ht1 = h1; ht2 = h2; }
+        else errors.push(`Ligne ${i + 1} : score mi-temps ignoré (invalide) : "${raw}"`);
+      }
+
+      matches.push({ p1, s1, s2, p2, winner, ht1, ht2 });
     }
     return { matches, errors };
   }
@@ -237,8 +266,8 @@
   }
 
   function exportImported() {
-    const header = 'Domicile,Score_Domicile,Score_Exterieur,Exterieur,Vainqueur';
-    const lines = importedMatches.map(m => `${m.p1},${m.s1},${m.s2},${m.p2},${m.winner}`);
+    const header = 'Domicile,Score_Domicile,Score_Exterieur,Exterieur,Vainqueur,MT_Domicile,MT_Exterieur';
+    const lines = importedMatches.map(m => `${m.p1},${m.s1},${m.s2},${m.p2},${m.winner},${m.ht1 != null ? m.ht1 : ''},${m.ht2 != null ? m.ht2 : ''}`);
     const blob = new Blob([[header].concat(lines).join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -272,6 +301,7 @@
     renderRanking();
     renderDashboard();
     refreshCurrentPronostic();
+    renderHtCalibrationNote();
     renderImportMeta();
 
     const skippedMsg = errors.length ? ` (${errors.length} ligne${errors.length > 1 ? 's' : ''} ignorée${errors.length > 1 ? 's' : ''}, voir détail ci-dessous)` : '';
@@ -524,8 +554,6 @@
   const selP2 = document.getElementById('select-p2');
   const selLine1 = document.getElementById('select-line1');
   const selLine2 = document.getElementById('select-line2');
-  const selLineHt1 = document.getElementById('select-line-ht1');
-  const selLineHt2 = document.getElementById('select-line-ht2');
   const runAnalysisBtn = document.getElementById('run-analysis-btn');
 
   players.forEach(p => {
@@ -545,6 +573,49 @@
   });
 
   runAnalysisBtn.addEventListener('click', runAnalysis);
+
+  // ------------------------------------------------------------
+  // Lignes 1ère mi-temps — liste dynamique (bouton "+" pour ajouter/retirer)
+  // ------------------------------------------------------------
+
+  const HT_LINE_OPTIONS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+  let htLineValues = [1.5];
+  const htLinesList = document.getElementById('ht-lines-list');
+  const addHtLineBtn = document.getElementById('add-ht-line-btn');
+
+  function nextHtLineDefault() {
+    return HT_LINE_OPTIONS.find(v => !htLineValues.includes(v)) || HT_LINE_OPTIONS[0];
+  }
+
+  function renderHtLinesPicker() {
+    htLinesList.innerHTML = htLineValues.map((val, i) => `
+      <div class="ht-line-row">
+        <select data-idx="${i}" aria-label="Ligne mi-temps ${i + 1}">
+          ${HT_LINE_OPTIONS.map(v => `<option value="${v}" ${v === val ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+        ${htLineValues.length > 1 ? `<button type="button" class="ht-line-remove" data-idx="${i}" title="Retirer cette ligne">&times;</button>` : ''}
+      </div>
+    `).join('');
+
+    htLinesList.querySelectorAll('select').forEach(sel => {
+      sel.addEventListener('change', () => { htLineValues[+sel.dataset.idx] = parseFloat(sel.value); });
+    });
+    htLinesList.querySelectorAll('.ht-line-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        htLineValues.splice(+btn.dataset.idx, 1);
+        renderHtLinesPicker();
+      });
+    });
+
+    addHtLineBtn.disabled = htLineValues.length >= HT_LINE_OPTIONS.length;
+  }
+
+  addHtLineBtn.addEventListener('click', () => {
+    htLineValues.push(nextHtLineDefault());
+    renderHtLinesPicker();
+  });
+
+  renderHtLinesPicker();
 
   function refreshPlayerSelects() {
     const names = E.listPlayers().map(p => p.name);
@@ -829,7 +900,7 @@
         return `<tr>
           <td>${i + 1}</td>
           <td>${m.goalsA}</td>
-          <td class="score">${m.goalsA} - ${m.goalsB}</td>
+          <td class="score">${m.goalsA} - ${m.goalsB}${m.htGoalsA != null ? `<span class="h2h-ht">MT ${m.htGoalsA}-${m.htGoalsB}</span>` : ''}</td>
           <td>${m.goalsB}</td>
           <td class="${vClass}">${esc(vName)}</td>
         </tr>`;
@@ -881,7 +952,7 @@
   function renderMarkets(model) {
     currentOptionMeta = {};
 
-    const ftLines = [2.5, 3.5, 4.5, 5.5, 6.5];
+    const ftLines = [2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5];
     document.getElementById('ft-markets').innerHTML = ftLines.map(line => {
       const over = model.ftMarkets[line].over;
       const idOver = registerOption(model, `ft-${line}-over`, 'Match complet', 'Plus de', line.toFixed(1), over);
@@ -895,7 +966,7 @@
       `;
     }).join('');
 
-    const htLines = [0.5, 1.5, 2.5, 3.5];
+    const htLines = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
     document.getElementById('ht-markets').innerHTML = htLines.map(line => {
       const over = model.htMarkets[line].over;
       const idOver = registerOption(model, `ht-${line}-over`, '1ère mi-temps', 'Plus de', line.toFixed(1), over);
@@ -915,11 +986,9 @@
   }
 
   // Affiche exactement les options que Napoleon Games propose pour ce match :
-  // les 2 lignes "mi-temps" + les 2 lignes "match complet" choisies dans les sélecteurs.
+  // les lignes "mi-temps" (liste dynamique) + les 2 lignes "match complet" choisies dans les sélecteurs.
   function renderFeaturedMarkets(model) {
-    const lineHt1 = parseFloat(selLineHt1.value);
-    const lineHt2 = parseFloat(selLineHt2.value);
-    const htLines = lineHt1 === lineHt2 ? [lineHt1] : [lineHt1, lineHt2];
+    const htLines = [...new Set(htLineValues)];
     const line1 = parseFloat(selLine1.value);
     const line2 = parseFloat(selLine2.value);
     const ftLines = line1 === line2 ? [line1] : [line1, line2];
